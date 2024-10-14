@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Card Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .game-container {
+            text-align: center;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .card {
+            width: 100px;
+            height: 100px;
+            background-color: #3498db;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: scale(1.05);
+        }
+        .card.flipped {
+            background-color: #2ecc71;
+        }
+        .card.matched {
+            background-color: #e74c3c;
+        }
+        #moves, #timer {
+            margin-top: 10px;
+            font-size: 18px;
+        }
+        #restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #restart-btn:hover {
+            background-color: #2980b9;
+        }
+        #name-form {
+            margin-bottom: 20px;
+        }
+        #name-input {
+            padding: 5px;
+            font-size: 16px;
+        }
+        #start-btn {
+            padding: 5px 10px;
+            font-size: 16px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #start-btn:hover {
+            background-color: #27ae60;
+        }
+        #win-message {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 20px;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Memory Card Game</h1>
+        <div id="name-form">
+            <input type="text" id="name-input" placeholder="Enter your name" required>
+            <button id="start-btn">Start Game</button>
+        </div>
+        <div id="game-area" style="display: none;">
+            <div id="moves">Moves: 0</div>
+            <div id="timer">Time: 0s</div>
+            <div class="game-board" id="game-board"></div>
+            <button id="restart-btn">Restart Game</button>
+        </div>
+        <div id="win-message"></div>
+    </div>
+
+    <script>
+        const gameBoard = document.getElementById('game-board');
+        const movesDisplay = document.getElementById('moves');
+        const timerDisplay = document.getElementById('timer');
+        const restartBtn = document.getElementById('restart-btn');
+        const nameForm = document.getElementById('name-form');
+        const nameInput = document.getElementById('name-input');
+        const startBtn = document.getElementById('start-btn');
+        const gameArea = document.getElementById('game-area');
+        const winMessage = document.getElementById('win-message');
+
+        const emojis = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
+        let cards = [...emojis, ...emojis];
+        let flippedCards = [];
+        let moves = 0;
+        let matches = 0;
+        let timer;
+        let seconds = 0;
+        let playerName = '';
+
+        function shuffleCards(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function createCard(emoji) {
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.dataset.emoji = emoji;
+            card.addEventListener('click', flipCard);
+            return card;
+        }
+
+        function flipCard() {
+            if (flippedCards.length < 2 && !this.classList.contains('flipped') && !this.classList.contains('matched')) {
+                this.classList.add('flipped');
+                this.textContent = this.dataset.emoji;
+                flippedCards.push(this);
+
+                if (flippedCards.length === 2) {
+                    moves++;
+                    movesDisplay.textContent = `Moves: ${moves}`;
+                    setTimeout(checkMatch, 500);
+                }
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            if (card1.dataset.emoji === card2.dataset.emoji) {
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matches++;
+                if (matches === emojis.length) {
+                    endGame();
+                }
+            } else {
+                card1.classList.remove('flipped');
+                card2.classList.remove('flipped');
+                card1.textContent = '';
+                card2.textContent = '';
+            }
+            flippedCards = [];
+        }
+
+        function startTimer() {
+            timer = setInterval(() => {
+                seconds++;
+                timerDisplay.textContent = `Time: ${seconds}s`;
+            }, 1000);
+        }
+
+        function endGame() {
+            clearInterval(timer);
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+            winMessage.textContent = `Congratulations, ${playerName}! You won in ${moves} moves and ${seconds} seconds.`;
+            gameArea.style.display = 'none';
+            winMessage.style.display = 'block';
+        }
+
+        function initGame() {
+            gameBoard.innerHTML = '';
+            cards = shuffleCards(cards);
+            cards.forEach(emoji => {
+                const card = createCard(emoji);
+                gameBoard.appendChild(card);
+            });
+            moves = 0;
+            matches = 0;
+            seconds = 0;
+            movesDisplay.textContent = 'Moves: 0';
+            timerDisplay.textContent = 'Time: 0s';
+            clearInterval(timer);
+            startTimer();
+            winMessage.style.display = 'none';
+            gameArea.style.display = 'block';
+        }
+
+        restartBtn.addEventListener('click', () => {
+            nameForm.style.display = 'block';
+            gameArea.style.display = 'none';
+            winMessage.style.display = 'none';
+        });
+
+        startBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            playerName = nameInput.value.trim();
+            if (playerName) {
+                nameForm.style.display = 'none';
+                initGame();
+            } else {
+                alert('Please enter your name to start the game.');
+            }
+        });
+    </script>
+</body>
+</html>
